@@ -2,9 +2,6 @@ name: Dotnet Build Template
 
 on:
   workflow_call:
-    permissions:
-      contents: read
-      packages: write
 
     inputs:
       dotnet-version:
@@ -25,6 +22,12 @@ on:
         required: false
         type: boolean
         default: false
+
+permissions:
+  contents: read
+  packages: write
+  checks: write
+  pull-requests: write
 
 jobs:
   build:
@@ -116,6 +119,15 @@ jobs:
         SAFE_NAME=$(echo "${{ matrix.test_path }}" | sed 's#[/:<>|*?"\\\r\n]#-#g')
         echo "safe_name=$SAFE_NAME" >> $GITHUB_OUTPUT
 
+    - name: Send to coverals
+      uses: coverallsapp/github-action@v2.2.3
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ matrix.test_path }}/TestResults/coverage.cobertura.xml
+        format: cobertura
+        flag-name: test-${{ matrix.test_path }}
+        parallel: true
+
     - name: Upload coverage
       uses: actions/upload-artifact@v4
       with:
@@ -129,27 +141,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - uses: actions/download-artifact@v4
-      with:
-        path: coverage
-
-    - name: Install ReportGenerator
-      run: dotnet tool install -g dotnet-reportgenerator-globaltool
-
-    - name: Merge
-      run: |
-        reportgenerator \
-          -reports:"coverage/**/coverage.cobertura.xml" \
-          -targetdir:"coverage-report" \
-          -reporttypes:"Cobertura"
-
-    - name: Send to Coveralls
+    - name: Finalize Coveralls
       uses: coverallsapp/github-action@v2.2.3
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        file: coverage-report/Cobertura.xml
-        format: cobertura
-        base-path: /
+        parallel-finished: true
 
   pack:
     if: ${{ inputs.run-pack }}
