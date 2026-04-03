@@ -1,4 +1,4 @@
-name: Dotnet Build Template
+name: Dotnet Build Workflow
 
 on:
   workflow_call:
