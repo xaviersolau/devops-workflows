@@ -34,15 +34,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: ${{ inputs.dotnet-version }}
 
     - name: Cache NuGet
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.nuget/packages
         key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
@@ -74,15 +74,15 @@ jobs:
         test_path: ${{ fromJson(inputs.test-projects) }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: ${{ inputs.dotnet-version }}
 
     - name: Cache NuGet
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.nuget/packages
         key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
@@ -119,14 +119,9 @@ jobs:
         SAFE_NAME=$(echo "${{ matrix.test_path }}" | sed 's#[/:<>|*?"\\\r\n]#-#g')
         echo "safe_name=$SAFE_NAME" >> $GITHUB_OUTPUT
 
-    - name: Send to coverals
-      uses: coverallsapp/github-action@v2.2.3
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ matrix.test_path }}/TestResults/coverage.cobertura.xml
-        format: cobertura
-        flag-name: test-${{ matrix.test_path }}
-        parallel: true
+    - name: Show build number
+      run: |
+        echo "Build number: ${{ github.run_id }}"
 
     - name: Upload coverage
       uses: actions/upload-artifact@v4
@@ -141,11 +136,34 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Finalize Coveralls
-      uses: coverallsapp/github-action@v2.2.3
+    - uses: actions/download-artifact@v4
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        parallel-finished: true
+        path: coverage
+
+    - name: Install ReportGenerator
+      run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+    - name: Merge
+      run: |
+        reportgenerator \
+          -reports:"coverage/**/coverage.cobertura.xml" \
+          -targetdir:"coverage-report" \
+          -reporttypes:"Html;Cobertura"
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: coverage-html
+        path: coverage-report
+
+    - name: Upload to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: coverage-report/Cobertura.xml
+        flags: unit_tests
+        fail_ci_if_error: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   pack:
     if: ${{ inputs.run-pack }}
@@ -153,13 +171,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
-    - uses: actions/setup-dotnet@v4
+    - uses: actions/setup-dotnet@v5
       with:
         dotnet-version: ${{ inputs.dotnet-version }}
 
-    - uses: actions/cache@v4
+    - uses: actions/cache@v5
       with:
         path: ~/.nuget/packages
         key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
