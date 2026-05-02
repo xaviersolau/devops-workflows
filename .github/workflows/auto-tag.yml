@@ -1,0 +1,37 @@
+name: Auto Tag on Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  tag:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history and tags
+
+    - name: Get latest tag
+      run: |
+        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        echo "LATEST_TAG=$latest_tag" >> $GITHUB_ENV
+
+    - name: Parse and increment version
+      run: |
+        version=${LATEST_TAG#v}  # Remove 'v' prefix
+        IFS='.' read -r major minor patch <<< "$version"
+        new_minor=$((minor + 1))
+        new_tag="v$major.$new_minor.0"
+        echo "NEW_TAG=$new_tag" >> $GITHUB_ENV
+
+    - name: Create and push tag
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git tag $NEW_TAG
+        git push origin $NEW_TAG

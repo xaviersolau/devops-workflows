@@ -23,6 +23,12 @@ on:
         type: boolean
         default: false
 
+      pack-folders:
+        required: false
+        type: string
+        default: '["src/libs"]'
+        description: "JSON array of folders to search for .nupkg files"
+
 permissions:
   contents: read
   packages: write
@@ -186,7 +192,14 @@ jobs:
     - run: dotnet build --configuration Release --no-restore
     - run: dotnet pack --configuration Release --no-build --no-restore
 
+    - name: Stage NuGet packages
+      run: |
+        mkdir -p nupkg-staging
+        for folder in ${{ fromJson(inputs.pack-folders) }}; do
+          find "$folder" -name "*.nupkg" -exec cp {} nupkg-staging/ \;
+        done
+
     - uses: actions/upload-artifact@v4
       with:
         name: NugetPackages
-        path: src/libs/**/*.nupkg
+        path: nupkg-staging/*.nupkg
