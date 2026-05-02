@@ -51,7 +51,8 @@ A complete CI workflow for .NET projects that includes:
 ### Pack Job (Optional)
 
 * Builds and packs NuGet packages
-* Publishes `.nupkg` artifacts
+* Searches specified folders for `.nupkg` files
+* Publishes all `.nupkg` artifacts from configured locations
 
 ---
 
@@ -67,12 +68,19 @@ on:
     branches: [ main ]
   pull_request:
 
+permissions:
+  contents: read
+  checks: write
+  packages: write
+  pull-requests: write
+
 jobs:
   build:
     uses: xaviersolau/devops-workflows/.github/workflows/build-dotnet.yml@main
     with:
       test-projects: '["tests/MyProject.Tests", "tests/MyOther.Tests"]'
       run-pack: true
+      pack-folders: '["src/libs", "src/packages"]'
 ```
 
 ---
@@ -85,6 +93,7 @@ jobs:
 | `test-projects`             | ✅        | —                      | JSON array of test project paths |
 | `coverlet-runsettings-file` | ❌        | `coverlet.runsettings` | Coverage configuration file      |
 | `run-pack`                  | ❌        | `false`                | Enable NuGet packaging           |
+| `pack-folders`              | ❌        | `["src/libs"]`        | JSON array of folders to search for .nupkg files |
 
 ---
 
@@ -105,7 +114,36 @@ with:
 
 * `coverage-html` → HTML coverage report
 * `coverage-*` → Individual coverage files per test project
-* `NugetPackages` → Generated `.nupkg` files (if enabled)
+* `NugetPackages` → Generated `.nupkg` files from configured folders (if enabled)
+
+---
+
+## 📦 NuGet Packaging Configuration
+
+The `pack` job collects `.nupkg` files from one or more folders using the `pack-folders` input.
+
+**Single folder (default):**
+```yaml
+with:
+  run-pack: true
+  # Uses default: ["src/libs"]
+```
+
+**Custom single folder:**
+```yaml
+with:
+  run-pack: true
+  pack-folders: '["src/packages"]'
+```
+
+**Multiple folders:**
+```yaml
+with:
+  run-pack: true
+  pack-folders: '["src/libs", "src/packages", "build/output"]'
+```
+
+All `.nupkg` files from all specified folders will be collected into a single `NugetPackages` artifact.
 
 ---
 
