@@ -136,11 +136,23 @@ with:
   pack-folders: '["src/packages"]'
 ```
 
-**Multiple folders:**
+**Multiple folders (single line):**
 ```yaml
 with:
   run-pack: true
   pack-folders: '["src/libs", "src/packages", "build/output"]'
+```
+
+**Multiple folders (multi-line, same as test-projects):**
+```yaml
+with:
+  run-pack: true
+  pack-folders: >
+    [
+      "src/libs",
+      "src/packages",
+      "build/output"
+    ]
 ```
 
 All `.nupkg` files from all specified folders will be collected into a single `NugetPackages` artifact.

@@ -8,20 +8,24 @@ on:
         required: false
         type: string
         default: "10.0.x"
+        description: "The .NET SDK version to install for the workflow"
 
       test-projects:
         required: true
         type: string
+        description: "JSON array of test project paths to run coverage and test jobs for"
 
       coverlet-runsettings-file:
         required: false
         type: string
         default: coverlet.runsettings
+        description: "Path to the Coverlet runsettings file for coverage collection"
 
       run-pack:
         required: false
         type: boolean
         default: false
+        description: "Whether to run the optional NuGet pack job"
 
       pack-folders:
         required: false
@@ -195,9 +199,17 @@ jobs:
     - name: Stage NuGet packages
       run: |
         mkdir -p nupkg-staging
-        for folder in ${{ fromJson(inputs.pack-folders) }}; do
-          find "$folder" -name "*.nupkg" -exec cp {} nupkg-staging/ \;
+        echo "Staging NuGet packages from folders: ${{ inputs.pack-folders }}"
+        echo '${{ inputs.pack-folders }}' | jq -r '.[]' | while IFS= read -r folder; do
+          echo "Processing folder: $folder"
+          if [ -d "$folder" ]; then
+            find "$folder" -name "*.nupkg" -print -exec cp {} nupkg-staging/ \;
+          else
+            echo "Warning: Folder '$folder' does not exist, skipping"
+          fi
         done
+        echo "Staging complete. Files in nupkg-staging:"
+        ls -la nupkg-staging/ || echo "No .nupkg files found"
 
     - uses: actions/upload-artifact@v4
       with:
